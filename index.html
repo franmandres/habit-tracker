@@ -355,7 +355,7 @@
         let currentDate = new Date();
         let data = JSON.parse(localStorage.getItem('calendarData')) || {};
         let currentView = 'calendar';
-        const sportsList = ["Abdominales","Padel", "Tenis", "Boxeo", "Futbol", "Comba","Natación"];
+        const sportsList = ["Padel","Natación","Running","Gimnasio"];
 
         function saveData() {
             localStorage.setItem('calendarData', JSON.stringify(data));
@@ -389,7 +389,7 @@
             <div class="p-2 ${isToday ? 'current-day' : ''} bg-white border rounded">
                 <span class="block text-center font-semibold">${getDayName((i + 1) % 7)} ${dayNumber}</span>
                 <div class="space-y-1 mt-2">
-                    <label><input type="checkbox" ${checkedData.exercise ? 'checked' : ''} onchange="toggleActivity(${dayNumber}, 'exercise')" class="mr-1">Ejercicio</label>
+                    <div><label><input type="checkbox" ${checkedData.exercise ? 'checked' : ''} onchange="toggleActivity(${dayNumber}, 'exercise')" class="mr-1">Ejercicio</label></div>
                     <label><input type="checkbox" ${checkedData.creatine ? 'checked' : ''} onchange="toggleActivity(${dayNumber}, 'creatine')" class="mr-1">Creatina</label>
                     <label><input type="checkbox" ${checkedData.steps ? 'checked' : ''} onchange="toggleActivity(${dayNumber}, 'steps')" class="mr-1">Meta pasos</label>
                     <input type="number" value="${checkedData.weight || ''}" class="w-full border rounded mt-1 hidden-weight" oninput="setWeight(${dayNumber}, this)" ${checkedData.weight ? '' : 'hidden'}>
