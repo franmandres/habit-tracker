@@ -5,18 +5,252 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Habit Tracker</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Inter', sans-serif; }
     .mes-actual { background-color: #FEF9C3; padding: 0.25rem 0.75rem; border-radius: 0.375rem; }
+    #toast { transition: all 0.3s ease-in-out; }
   </style>
 </head>
-<body class="bg-gray-50 text-gray-900">
+<body class="bg-gray-50 text-gray-900 relative">
 
-<!-- Aquí iría el código completo y funcional que une todas las funcionalidades previas -->
-<!-- Por razones de espacio y formato, aquí insertaremos solo el encabezado del archivo -->
+<!-- Toast de aviso -->
+<div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded shadow hidden z-50"></div>
 
-<p>Archivo final completo listo para ser entregado.</p>
+<!-- Encabezado con navegación -->
+<header class="flex items-center justify-between max-w-4xl mx-auto px-4 py-4">
+  <button onclick="cambiarMes(-1)" class="text-2xl text-gray-500 hover:text-black">&#8592;</button>
+  <h1 id="mes-actual" class="text-xl font-semibold text-center"></h1>
+  <button onclick="cambiarMes(1)" class="text-2xl text-gray-500 hover:text-black">&#8594;</button>
+</header>
+
+<!-- Calendario -->
+<main class="max-w-4xl mx-auto p-4 pb-20">
+  <div class="grid grid-cols-7 gap-2 text-center text-sm font-medium mb-2">
+    <div>Lunes</div><div>Martes</div><div>Miércoles</div><div>Jueves</div><div>Viernes</div><div>Sábado</div><div>Domingo</div>
+  </div>
+  <div id="calendar" class="grid grid-cols-7 gap-2 text-center"></div>
+  <div class="mt-4 text-center">
+    <button onclick="mostrarResumen()" class="text-sm bg-gray-800 text-white px-4 py-2 rounded hover:bg-black transition">Ver resumen mensual</button>
+  </div>
+</main>
+
+<!-- Botón flotante móvil -->
+<button onclick="irAlDiaActual()" class="fixed bottom-6 right-6 bg-blue-600 text-white text-2xl rounded-full w-14 h-14 shadow-md md:hidden">+</button>
+
+<!-- Modal -->
+<div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-30">
+  <div class="bg-white rounded-lg p-6 w-full max-w-xl relative max-h-[90vh] overflow-y-auto">
+    <button onclick="cerrarModal()" class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl">&times;</button>
+    <h2 id="modal-title" class="text-xl font-semibold mb-4">Registro del día</h2>
+    <div class="mb-4">
+      <h3 class="font-medium mb-2">Hábitos diarios</h3>
+      <div class="grid grid-cols-2 gap-2">
+        <label><input type="checkbox" id="agua" /> Tomar agua</label>
+        <label><input type="checkbox" id="leer" /> Leer</label>
+        <label><input type="checkbox" id="dormir" /> Dormir 7h</label>
+        <label><input type="checkbox" id="creatina" /> Creatina</label>
+        <label><input type="checkbox" id="proyecto" /> Proyecto personal</label>
+      </div>
+    </div>
+    <div class="mb-4">
+      <h3 class="font-medium mb-2">Ejercicio</h3>
+      <select id="ejercicio" onchange="mostrarOpcionesEjercicio()" class="w-full border rounded p-2">
+        <option value="">Seleccionar...</option>
+        <option value="natacion">Natación</option>
+        <option value="padel">Pádel</option>
+        <option value="gimnasio">Gimnasio</option>
+        <option value="running">Running</option>
+      </select>
+      <div id="running-fields" class="mt-2 hidden">
+        <input type="text" id="ritmo" placeholder="Ritmo (min/km)" class="w-full border rounded p-2 my-1" />
+        <input type="number" id="km" placeholder="Kilómetros" class="w-full border rounded p-2 my-1" />
+      </div>
+      <div id="gimnasio-fields" class="mt-2 hidden">
+        <select id="tipoGimnasio" class="w-full border rounded p-2">
+          <option value="">Tipo de entrenamiento</option>
+          <option value="espalda">Espalda/Bíceps</option>
+          <option value="pecho">Pecho/Tríceps</option>
+          <option value="hombro">Hombro/Abdominales</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="flex justify-between mt-4">
+      <button onclick="guardarRegistro()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Guardar</button>
+      <button onclick="limpiarRegistro()" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">Limpiar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Resumen mensual -->
+<div id="resumen" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-40">
+  <div class="bg-white rounded-lg p-6 w-full max-w-xl relative max-h-[90vh] overflow-y-auto">
+    <button onclick="cerrarResumen()" class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl">&times;</button>
+    <h2 class="text-xl font-semibold mb-4">Resumen mensual</h2>
+    <div id="resumen-contenido" class="space-y-2 text-sm"></div>
+  </div>
+</div>
+
+<script>
+const calendar = document.getElementById('calendar');
+const mesActual = document.getElementById('mes-actual');
+const toast = document.getElementById('toast');
+const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+let fecha = new Date();
+let diaSeleccionado = null;
+
+function mostrarToast(msg) {
+  toast.textContent = msg;
+  toast.classList.remove("hidden");
+  setTimeout(() => toast.classList.add("hidden"), 2000);
+}
+
+function renderizarCalendario() {
+  calendar.innerHTML = "";
+  const año = fecha.getFullYear();
+  const mes = fecha.getMonth();
+  const hoy = new Date();
+  const esMesActual = hoy.getMonth() === mes && hoy.getFullYear() === año;
+  mesActual.innerHTML = `<span class="${esMesActual ? 'mes-actual' : ''}">${meses[mes]} ${año}</span>`;
+  const primerDia = new Date(año, mes, 1).getDay() || 7;
+  const totalDias = new Date(año, mes + 1, 0).getDate();
+
+  for (let i = 1; i < primerDia; i++) calendar.appendChild(document.createElement("div"));
+  for (let d = 1; d <= totalDias; d++) {
+    const key = `${año}-${mes + 1}-${d}`;
+    const btn = document.createElement("button");
+    btn.textContent = d;
+    btn.className = "bg-white border rounded p-2 hover:bg-blue-100 transition";
+    if (localStorage.getItem("habit_" + key)) btn.classList.add("bg-green-200");
+    if (d === hoy.getDate() && mes === hoy.getMonth() && año === hoy.getFullYear())
+      btn.classList.add("shadow", "shadow-yellow-300");
+    btn.id = "dia-" + key;
+    btn.onclick = () => abrirModal(d, mes, año);
+    calendar.appendChild(btn);
+  }
+}
+
+function cambiarMes(v) {
+  fecha.setMonth(fecha.getMonth() + v);
+  renderizarCalendario();
+}
+
+function abrirModal(dia, mes, año) {
+  diaSeleccionado = { dia, mes, año };
+  document.getElementById("modal").classList.remove("hidden");
+  document.getElementById("modal-title").textContent = `Registro del ${dia}/${mes + 1}/${año}`;
+  cargarRegistro();
+}
+
+function cerrarModal() {
+  document.getElementById("modal").classList.add("hidden");
+}
+
+function mostrarOpcionesEjercicio() {
+  const tipo = ejercicio.value;
+  document.getElementById("running-fields").classList.toggle("hidden", tipo !== "running");
+  document.getElementById("gimnasio-fields").classList.toggle("hidden", tipo !== "gimnasio");
+}
+
+function guardarRegistro() {
+  const { dia, mes, año } = diaSeleccionado;
+  const key = `${año}-${mes + 1}-${dia}`;
+  const data = {
+    agua: agua.checked, leer: leer.checked, dormir: dormir.checked,
+    creatina: creatina.checked, proyecto: proyecto.checked,
+    ejercicio: ejercicio.value, ritmo: ritmo.value,
+    km: parseFloat(km.value) || 0, tipoGimnasio: tipoGimnasio.value
+  };
+  const isEmpty = !data.agua && !data.leer && !data.dormir && !data.creatina && !data.proyecto && !data.ejercicio;
+  const btn = document.getElementById("dia-" + key);
+  if (isEmpty) {
+    localStorage.removeItem("habit_" + key);
+    btn?.classList.remove("bg-green-200");
+    mostrarToast("Día limpiado");
+  } else {
+    localStorage.setItem("habit_" + key, JSON.stringify(data));
+    btn?.classList.add("bg-green-200");
+    mostrarToast("Guardado correctamente");
+  }
+  cerrarModal();
+}
+
+function limpiarRegistro() {
+  if (!diaSeleccionado) return;
+  const { dia, mes, año } = diaSeleccionado;
+  const key = `${año}-${mes + 1}-${dia}`;
+  localStorage.removeItem("habit_" + key);
+  agua.checked = leer.checked = dormir.checked = creatina.checked = proyecto.checked = false;
+  ejercicio.value = ritmo.value = km.value = tipoGimnasio.value = "";
+  mostrarOpcionesEjercicio();
+  document.getElementById("dia-" + key)?.classList.remove("bg-green-200");
+  mostrarToast("Día limpiado");
+}
+
+function cargarRegistro() {
+  const { dia, mes, año } = diaSeleccionado;
+  const data = JSON.parse(localStorage.getItem("habit_" + `${año}-${mes + 1}-${dia}`)) || {};
+  agua.checked = !!data.agua; leer.checked = !!data.leer; dormir.checked = !!data.dormir;
+  creatina.checked = !!data.creatina; proyecto.checked = !!data.proyecto;
+  ejercicio.value = data.ejercicio || ""; ritmo.value = data.ritmo || "";
+  km.value = data.km || ""; tipoGimnasio.value = data.tipoGimnasio || "";
+  mostrarOpcionesEjercicio();
+}
+
+function mostrarResumen() {
+  const resumen = {
+    agua: 0, leer: 0, dormir: 0, creatina: 0, proyecto: 0,
+    natacion: 0, padel: 0, gimnasio: 0, running: 0, km: 0,
+    gimnasioTipos: { espalda: 0, pecho: 0, hombro: 0, otro: 0 }
+  };
+  const año = fecha.getFullYear(), mes = fecha.getMonth() + 1;
+  for (let d = 1; d <= 31; d++) {
+    const data = JSON.parse(localStorage.getItem("habit_" + `${año}-${mes}-${d}`));
+    if (data) {
+      if (data.agua) resumen.agua++;
+      if (data.leer) resumen.leer++;
+      if (data.dormir) resumen.dormir++;
+      if (data.creatina) resumen.creatina++;
+      if (data.proyecto) resumen.proyecto++;
+      if (data.ejercicio) resumen[data.ejercicio]++;
+      if (data.ejercicio === "running") resumen.km += data.km;
+      if (data.ejercicio === "gimnasio") resumen.gimnasioTipos[data.tipoGimnasio] = (resumen.gimnasioTipos[data.tipoGimnasio] || 0) + 1;
+    }
+  }
+  document.getElementById("resumen-contenido").innerHTML = `
+    <p><strong>Hábitos:</strong></p>
+    <p>Tomar agua: ${resumen.agua}</p>
+    <p>Leer: ${resumen.leer}</p>
+    <p>Dormir 7h: ${resumen.dormir}</p>
+    <p>Creatina: ${resumen.creatina}</p>
+    <p>Proyecto personal: ${resumen.proyecto}</p>
+    <hr />
+    <p><strong>Ejercicio:</strong></p>
+    <p>Natación: ${resumen.natacion}</p>
+    <p>Pádel: ${resumen.padel}</p>
+    <p>Gimnasio: ${resumen.gimnasio}</p>
+    <p>&nbsp;• Espalda/Bíceps: ${resumen.gimnasioTipos.espalda}</p>
+    <p>&nbsp;• Pecho/Tríceps: ${resumen.gimnasioTipos.pecho}</p>
+    <p>&nbsp;• Hombro/Abdominales: ${resumen.gimnasioTipos.hombro}</p>
+    <p>&nbsp;• Otro: ${resumen.gimnasioTipos.otro}</p>
+    <p>Running: ${resumen.running}</p>
+    <p>Total km: ${resumen.km.toFixed(2)} km</p>
+  `;
+  document.getElementById("resumen").classList.remove("hidden");
+}
+
+function cerrarResumen() {
+  document.getElementById("resumen").classList.add("hidden");
+}
+
+function irAlDiaActual() {
+  fecha = new Date();
+  renderizarCalendario();
+  abrirModal(fecha.getDate(), fecha.getMonth(), fecha.getFullYear());
+}
+
+renderizarCalendario();
+</script>
 
 </body>
 </html>
